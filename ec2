@@ -1,8 +1,7 @@
 #!/bin/bash
 #set -x
 
-# Define your AWS variables
-
+# Define your AWS variables:
 # AWS Linux:
 AMI="ami-01bc990364452ab3e"
 # Ubuntu 22.04
@@ -15,10 +14,12 @@ SG="sg-0dcc9a6e36e8be173"
 KEY="sko-aws"
 SSH_KEY_FILE="~/.ssh/sko-aws"
 
+HELP_STRING='Usage: $(basename $0) [up|halt|reboot|destroy|ssh|status|status-all] <instance-info>\n
+                  \t<instance-info> is instance-tag or user@instance-tag in case of ssh'
+
 # Check if the required command-line arguments are provided
 if [ $# -lt 1 ]; then
-  echo "Usage: $(basename $0) [up|halt|reboot|destroy|ssh|status|status-all] <instance-info>"
-  echo "       <instance-info> is instance-tag or user@instance-tag in case of ssh" 
+  echo -e $HELP_STRING
   exit 1
 fi
 
@@ -117,8 +118,7 @@ case $COMMAND in
 
   *)
     echo "Invalid command: $COMMAND"
-    echo "Usage: $(basename $0) [up|halt|reboot|destroy|ssh|status|status-all] <instance-info>"
-    echo "       <instance-info> is instance-tag or user@instance-tag in case of ssh" 
+    echo -e $HELP_STRING
     exit 1
     ;;
 esac
