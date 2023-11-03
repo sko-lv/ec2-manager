@@ -1,5 +1,5 @@
 #!/bin/bash
-set -x
+#set -x
 
 # Define your AWS variables
 
@@ -27,30 +27,44 @@ INSTANCE_INFO="$2"
 
 case $COMMAND in
   up)
-    # Create or start an EC2 instance
-    aws ec2 run-instances --region "$REGION" --image-id "$AMI" --instance-type "$TYPE" \
-                          --subnet-id "$SUBNET" --security-group-ids "$SG" --key-name "$KEY" \
-                          --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$INSTANCE_INFO}]"
+    # Check if an instance with the given tag already exists
+     EXISTING_INSTANCE=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=$INSTANCE_INFO" \
+                             "Name=instance-state-name,Values=running,pending,stopped" \
+                             --query 'Reservations[].Instances[0].InstanceId' --output text)
+    if [ -n "$EXISTING_INSTANCE" ]; then
+      # If an instance with the given tag exists, start it
+      aws ec2 start-instances --instance-ids "$EXISTING_INSTANCE"
+    else
+      # If no instance with the given tag exists, create a new one
+      aws ec2 run-instances --image-id "$AMI" --instance-type t2.micro --subnet-id "$SUBNET" \
+                        --security-group-ids "$SG" --key-name "$KEY" \
+                        --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$INSTANCE_INFO}]"
+    fi
     ;;
 
   halt)
     # Stop an EC2 instance
     INSTANCE_ID=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=$INSTANCE_INFO" \
-                          --query 'Reservations[].Instances[0].InstanceId' --output text)
+                             "Name=instance-state-name,Values=running,pending" \
+                             --query 'Reservations[].Instances[0].InstanceId' --output text)
     aws ec2 stop-instances --instance-ids "$INSTANCE_ID"
     ;;
 
   reboot)
     # Reboot an EC2 instance
-    INSTANCE_ID=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=$INSTANCE_INFO" \ 
-                          --query 'Reservations[].Instances[0].InstanceId' --output text)
+    INSTANCE_ID=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=$INSTANCE_INFO" \
+                             "Name=instance-state-name,Values=running" \
+                             --query 'Reservations[].Instances[0].InstanceId' --output text)
+
     aws ec2 reboot-instances --instance-ids "$INSTANCE_ID"
     ;;
 
   destroy)
     # Terminate an EC2 instance
     INSTANCE_ID=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=$INSTANCE_INFO" \
-                          --query 'Reservations[].Instances[0].InstanceId' --output text)
+                             "Name=instance-state-name,Values=running,pending,stopped" \
+                             --query 'Reservations[].Instances[0].InstanceId' --output text)
+
     aws ec2 terminate-instances --instance-ids "$INSTANCE_ID"
     ;;
 
@@ -63,20 +77,21 @@ case $COMMAND in
     USER=$(echo "$INSTANCE_INFO" | cut -d'@' -f1)
     TAG=$(echo "$INSTANCE_INFO" | cut -d'@' -f2)
     PUBLIC_IP=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=$TAG" \
+                    "Name=instance-state-name,Values=running" \
                     --query 'Reservations[].Instances[0].PublicIpAddress' --output text)
     if [ -z "$PUBLIC_IP" ]; then
       echo "Instance not found or down or does not have a public IP."
       exit 1
     fi
     USER_HOST="$USER@$PUBLIC_IP"
-    ssh -i "$SSH_KEY_FILE" -o StrictHostKeyChecking=no "$USER_HOST" 2>/dev/null
+    ssh -i "$SSH_KEY_FILE" -o StrictHostKeyChecking=no "$USER_HOST"
     ;;
 
   status)
     # View the status of an EC2 instance by tag
     STATUS=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=$INSTANCE_INFO" \
                      --query 'Reservations[].Instances[0].State.Name' --output text)
-    echo "Instance '$INSTANCE_INFO' is $STATUS"
+    echo "Instance(s) '$INSTANCE_INFO' status is: $STATUS"
     ;;
 
   status-all)
