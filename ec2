@@ -93,8 +93,12 @@ case $COMMAND in
 
   status-all)
     # View the status of all instances with their instance ID and external IP
-    INSTANCES=$(aws ec2 describe-instances --query 'Reservations[].Instances' --output table)
-    echo "$INSTANCES"
+    INSTANCES=$(aws ec2 describe-instances --query 'Reservations[].Instances')
+    if [ -z "$INSTANCES" ]; then
+      echo "No instances found."
+      exit 1
+    fi
+    echo "$INSTANCES" | jq -r '.[] | "\(.Tags[0].Value)\t\(.State.Name)\t\(.InstanceId)\t\(.PublicIpAddress)"'
     ;;
 
   *)
