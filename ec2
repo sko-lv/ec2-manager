@@ -84,7 +84,7 @@ case $COMMAND in
     INSTANCES=$(aws ec2 describe-instances --query 'Reservations[].Instances')
     if [ -z "$INSTANCES" ]; then
       echo "No instances found."
-      exit 1
+      exit 2
     fi
     echo "$INSTANCES" | \
          jq -r '.[][] | "\(.Tags[0].Value)\t\t\(.State.Name)\t\(.InstanceId)\t\(.PublicIpAddress)"'
