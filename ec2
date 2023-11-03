@@ -17,7 +17,7 @@ SSH_KEY_FILE="~/.ssh/sko-aws"
 
 # Check if the required command-line arguments are provided
 if [ $# -lt 1 ]; then
-  echo "Usage: $0 [up|halt|reboot|destroy|ssh|status|status-all] <instance-info>"
+  echo "Usage: $(basename $0) [up|halt|reboot|destroy|ssh|status|status-all] <instance-info>"
   echo "       <instance-info> is instance-tag or user@instance-tag in case of ssh" 
   exit 1
 fi
@@ -107,7 +107,7 @@ case $COMMAND in
 
   *)
     echo "Invalid command: $COMMAND"
-    echo "Usage: $0 [up|halt|reboot|destroy|ssh|status|status-all] <instance-info>"
+    echo "Usage: $(basename $0) [up|halt|reboot|destroy|ssh|status|status-all] <instance-info>"
     echo "       <instance-info> is instance-tag or user@instance-tag in case of ssh" 
     exit 1
     ;;
