@@ -1,17 +1,5 @@
 #!/bin/bash
-
-# Ubuntu 22.04 
-#AMI=
-
-# Amazon Linux
-AMI=
-
-# Centos 7
-# AMI=
-
-SUBNET= 
-SG=
-KEY=sko-aws
+set -x
 
 # Define your AWS variables
 
@@ -98,7 +86,8 @@ case $COMMAND in
       echo "No instances found."
       exit 1
     fi
-    echo "$INSTANCES" | jq -r '.[] | "\(.Tags[0].Value)\t\(.State.Name)\t\(.InstanceId)\t\(.PublicIpAddress)"'
+    echo "$INSTANCES" | \
+         jq -r '.[][] | "\(.Tags[0].Value)\t\t\(.State.Name)\t\(.InstanceId)\t\(.PublicIpAddress)"'
     ;;
 
   *)
