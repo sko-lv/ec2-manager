@@ -1,0 +1,106 @@
+#!/bin/bash
+
+# Ubuntu 22.04 
+#AMI=
+
+# Amazon Linux
+AMI=
+
+# Centos 7
+# AMI=
+
+SUBNET= 
+SG=
+KEY=sko-aws
+
+# Define your AWS variables
+
+# AWS Linux:
+AMI="ami-01bc990364452ab3e"
+# Ubuntu 22.04
+#AMI="ami-053b0d53c279acc90"
+
+REGION="us-east-1"
+TYPE="t2.micro"
+SUBNET="subnet-0bb2741b2a1a17f0e"
+SG="sg-0dcc9a6e36e8be173"
+KEY="sko-aws"
+SSH_KEY_FILE="~/.ssh/sko-aws"
+
+# Check if the required command-line arguments are provided
+if [ $# -lt 1 ]; then
+  echo "Usage: $0 [up|halt|reboot|destroy|ssh|status|status-all] <instance-info>"
+  echo "       <instance-info> is instance-tag or user@instance-tag in case of ssh" 
+  exit 1
+fi
+
+COMMAND="$1"
+INSTANCE_INFO="$2"
+
+case $COMMAND in
+  up)
+    # Create or start an EC2 instance
+    aws ec2 run-instances --region "$REGION" --image-id "$AMI" --instance-type "$TYPE" \
+                          --subnet-id "$SUBNET" --security-group-ids "$SG" --key-name "$KEY" \
+                          --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$INSTANCE_INFO}]"
+    ;;
+
+  halt)
+    # Stop an EC2 instance
+    INSTANCE_ID=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=$INSTANCE_INFO" \
+                          --query 'Reservations[].Instances[0].InstanceId' --output text)
+    aws ec2 stop-instances --instance-ids "$INSTANCE_ID"
+    ;;
+
+  reboot)
+    # Reboot an EC2 instance
+    INSTANCE_ID=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=$INSTANCE_INFO" \ 
+                          --query 'Reservations[].Instances[0].InstanceId' --output text)
+    aws ec2 reboot-instances --instance-ids "$INSTANCE_ID"
+    ;;
+
+  destroy)
+    # Terminate an EC2 instance
+    INSTANCE_ID=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=$INSTANCE_INFO" \
+                          --query 'Reservations[].Instances[0].InstanceId' --output text)
+    aws ec2 terminate-instances --instance-ids "$INSTANCE_ID"
+    ;;
+
+  ssh)
+    # SSH into an EC2 instance
+    if [ -z "$INSTANCE_INFO" ]; then
+      echo "Please provide the ssh-user@instance-tag as the second argument."
+      exit 1
+    fi
+    USER=$(echo "$INSTANCE_INFO" | cut -d'@' -f1)
+    TAG=$(echo "$INSTANCE_INFO" | cut -d'@' -f2)
+    PUBLIC_IP=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=$TAG" \
+                    --query 'Reservations[].Instances[0].PublicIpAddress' --output text)
+    if [ -z "$PUBLIC_IP" ]; then
+      echo "Instance not found or down or does not have a public IP."
+      exit 1
+    fi
+    USER_HOST="$USER@$PUBLIC_IP"
+    ssh -i "$SSH_KEY_FILE" -o StrictHostKeyChecking=no "$USER_HOST" 2>/dev/null
+    ;;
+
+  status)
+    # View the status of an EC2 instance by tag
+    STATUS=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=$INSTANCE_INFO" \
+                     --query 'Reservations[].Instances[0].State.Name' --output text)
+    echo "Instance '$INSTANCE_INFO' is $STATUS"
+    ;;
+
+  status-all)
+    # View the status of all instances with their instance ID and external IP
+    INSTANCES=$(aws ec2 describe-instances --query 'Reservations[].Instances' --output table)
+    echo "$INSTANCES"
+    ;;
+
+  *)
+    echo "Invalid command: $COMMAND"
+    echo "Usage: $0 [up|halt|reboot|destroy|ssh|status|status-all] <instance-info>"
+    echo "       <instance-info> is instance-tag or user@instance-tag in case of ssh" 
+    exit 1
+    ;;
+esac
