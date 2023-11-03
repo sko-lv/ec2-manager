@@ -8,7 +8,7 @@ AMI="ami-01bc990364452ab3e"
 # Ubuntu 22.04
 #AMI="ami-053b0d53c279acc90"
 
-REGION="us-east-1"
+# Used default: REGION="us-east-1"
 TYPE="t2.micro"
 SUBNET="subnet-0bb2741b2a1a17f0e"
 SG="sg-0dcc9a6e36e8be173"
@@ -24,6 +24,7 @@ fi
 
 COMMAND="$1"
 INSTANCE_INFO="$2"
+USERDATA="$3"
 
 case $COMMAND in
   up)
@@ -35,10 +36,19 @@ case $COMMAND in
       # If an instance with the given tag exists, start it
       aws ec2 start-instances --instance-ids "$EXISTING_INSTANCE"
     else
-      # If no instance with the given tag exists, create a new one
-      aws ec2 run-instances --image-id "$AMI" --instance-type t2.micro --subnet-id "$SUBNET" \
+      # If no instance with the given tag exists, create a new one with or w/o user data
+        if [ -r "$USERDATA" ]; then
+          # Use user data file if present
+          aws ec2 run-instances --image-id "$AMI" --instance-type t2.micro --subnet-id "$SUBNET" \
+                        --security-group-ids "$SG" --key-name "$KEY" \
+                        --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$INSTANCE_INFO}]" \
+                        --user-data file://$USERDATA
+        else
+          # Run instance w/o user data
+          aws ec2 run-instances --image-id "$AMI" --instance-type t2.micro --subnet-id "$SUBNET" \
                         --security-group-ids "$SG" --key-name "$KEY" \
                         --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$INSTANCE_INFO}]"
+      fi
     fi
     ;;
 
