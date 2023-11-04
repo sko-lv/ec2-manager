@@ -14,6 +14,15 @@ if [ ! -f "$CONFIG_FILE" ]; then
   exit 1
 fi
 
+# Check if TAG exists:
+check_tag() {
+  aws ec2 describe-instances --filters "Name=tag:Name,Values=$1" \
+          "Name=instance-state-name,Values=running,pending,stopped" \
+          --query 'Reservations[].Instances[0].InstanceId' --output text
+
+}
+
+
 # Read variables from ec2config
 while IFS= read -r line; do
   # Remove everything after the first '#' to ignore comments
@@ -25,6 +34,7 @@ while IFS= read -r line; do
   export $var=$value
 done < "$CONFIG_FILE"
 
+NO_TAG_MSG="Instance tagged '$TAG' does not exist"
 
 # Check if the required command-line arguments are provided
 if [ $# -lt 1 ]; then
@@ -35,9 +45,7 @@ fi
 case $COMMAND in
   up)
     # Check if an instance with the given tag already exists
-     EXISTING_INSTANCE=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=$TAG" \
-                             "Name=instance-state-name,Values=running,pending,stopped" \
-                             --query 'Reservations[].Instances[0].InstanceId' --output text)
+    EXISTING_INSTANCE=$(check_tag $TAG)
     if [ -n "$EXISTING_INSTANCE" ]; then
       # If an instance with the given tag exists, start it
       aws ec2 start-instances --instance-ids "$EXISTING_INSTANCE"
@@ -60,6 +68,7 @@ case $COMMAND in
 
   halt)
     # Stop an EC2 instance
+    [ ! -n "$(check_tag $TAG)" ] && echo $NO_TAG_MSG && exit 3
     INSTANCE_ID=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=$TAG" \
                              "Name=instance-state-name,Values=running,pending" \
                              --query 'Reservations[].Instances[0].InstanceId' --output text)
@@ -68,8 +77,9 @@ case $COMMAND in
 
   reboot)
     # Reboot an EC2 instance
+    [ ! -n "$(check_tag $TAG)" ] && echo $NO_TAG_MSG && exit 3
     INSTANCE_ID=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=$TAG" \
-                             "Name=instance-state-name,Values=running" \
+                             "Name=instance-state-name,Values=running,pending,stopped" \
                              --query 'Reservations[].Instances[0].InstanceId' --output text)
 
     aws ec2 reboot-instances --instance-ids $INSTANCE_ID
@@ -77,6 +87,7 @@ case $COMMAND in
 
   destroy)
     # Terminate an EC2 instance
+    [ ! -n "$(check_tag $TAG)" ] && echo $NO_TAG_MSG && exit 3
     INSTANCE_ID=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=$TAG" \
                              "Name=instance-state-name,Values=running,pending,stopped" \
                              --query 'Reservations[].Instances[0].InstanceId' --output text)
@@ -86,7 +97,7 @@ case $COMMAND in
 
   ssh)
     # SSH into an EC2 instance
-    
+    [ ! -n "$(check_tag $TAG)" ] && echo $NO_TAG_MSG && exit 3
     PUBLIC_IP=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=$TAG" \
                     "Name=instance-state-name,Values=running" \
                     --query 'Reservations[].Instances[0].PublicIpAddress' --output text)
@@ -99,6 +110,7 @@ case $COMMAND in
 
   status)
     # View the status of an EC2 instance by tag
+    [ ! -n "$(check_tag $TAG)" ] && echo $NO_TAG_MSG && exit 3
     STATUS=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=$TAG" \
                      --query 'Reservations[].Instances[0].State.Name' --output text)
     echo "Instance(s) '$TAG' status is: $STATUS"
