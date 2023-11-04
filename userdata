@@ -1,0 +1,6 @@
+#!/bin/bash
+# Do not delete first string
+
+# EC2 provisioning script:
+date > /tmp/hello.txt
+

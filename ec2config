@@ -1,0 +1,17 @@
+# Define AWS EC2 variables:
+
+# AWS Linux:
+AMI="ami-01bc990364452ab3e"
+# Ubuntu 22.04
+#AMI="ami-053b0d53c279acc90"
+
+# Used default: REGION="us-east-1"
+TYPE="t2.micro"
+SUBNET="subnet-0bb2741b2a1a17f0e"
+SG="sg-0dcc9a6e36e8be173"
+KEY_PAIR="sko-aws"
+SSH_KEY_FILE="~/.ssh/sko-aws"
+SSH_USER="ec2-user"
+#SSH_USER="ubuntu"
+TAG="test"
+
