@@ -10,7 +10,7 @@ HELP_STRING="Usage: $(basename $0) [up|halt|reboot|destroy|ssh|status|status-all
 
 # Check if the ec2config file exists
 if [ ! -f "$CONFIG_FILE" ]; then
-  echo "The ec2config file does not exist."
+  echo "ERROR: ec2config file does not exist."
   exit 1
 fi
 
@@ -92,7 +92,7 @@ case $COMMAND in
                     --query 'Reservations[].Instances[0].PublicIpAddress' --output text)
     if [ -z "$PUBLIC_IP" ]; then
       echo "Instance not_found/pending/down or does not have a public IP."
-      exit 1
+      exit 3
     fi
     ssh -i "$SSH_KEY_FILE" -o StrictHostKeyChecking=no $SSH_USER@$PUBLIC_IP
     ;;
@@ -109,7 +109,7 @@ case $COMMAND in
     INSTANCES=$(aws ec2 describe-instances --query 'Reservations[].Instances')
     if [ -z "$INSTANCES" ]; then
       echo "No instances found."
-      exit 2
+      exit 3
     fi
     echo "$INSTANCES" | \
          jq -r '.[][] | "\(.Tags[0].Value)\t\t\(.State.Name)\t\(.InstanceId)\t\(.PublicIpAddress)"'
@@ -118,6 +118,6 @@ case $COMMAND in
   *)
     echo "Invalid command: $COMMAND"
     echo -e $HELP_STRING
-    exit 1
+    exit 2
     ;;
 esac
