@@ -1,5 +1,5 @@
 # ec2-manager  
-** Manage ec2 instances with commands like a vagrant.
+**Manage ec2 instances with commands like a vagrant.**
 
 ### Files:
 ec2       - bash script. Script operates with instance tagged in _ec2config_ file.
