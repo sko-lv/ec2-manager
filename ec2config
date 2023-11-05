@@ -13,5 +13,5 @@ KEY_PAIR="sko-aws"
 SSH_KEY_FILE="~/.ssh/sko-aws"
 SSH_USER="ec2-user"
 #SSH_USER="ubuntu"
-TAG="test"
+TAG="tag"
 

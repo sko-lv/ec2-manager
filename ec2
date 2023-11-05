@@ -8,31 +8,33 @@ HELP_STRING="Usage: $(basename $0) [up|halt|reboot|destroy|ssh|status|status-all
                   \tFile ./ec2config is mandatory. File ./userdata - optional." 
 
 
+check_ec2config_file() {
 # Check if the ec2config file exists
-if [ ! -f "$CONFIG_FILE" ]; then
-  echo "ERROR: ec2config file does not exist."
+if [ ! -f "$1" ]; then
+  echo "ERROR: ./ec2config file does not exist."
   exit 1
 fi
+}
 
-# Check if TAG exists:
 check_tag() {
+  # Check if TAG exists:
   aws ec2 describe-instances --filters "Name=tag:Name,Values=$1" \
           "Name=instance-state-name,Values=running,pending,stopped" \
           --query 'Reservations[].Instances[0].InstanceId' --output text
-
 }
 
-
 # Read variables from ec2config
-while IFS= read -r line; do
-  # Remove everything after the first '#' to ignore comments
-  line="$(echo ${line%%#*} | tr -d '"')"
-  # Skip empty lines
-  [[ -z "$line" ]] && continue
-  # Split the line by '=' and set the variable
-  IFS="=" read -r var value <<< "$line"
-  export $var=$value
-done < "$CONFIG_FILE"
+if [ -f "$CONFIG_FILE" ]; then
+  while IFS= read -r line; do
+    # Remove everything after the first '#' to ignore comments
+    line="$(echo ${line%%#*} | tr -d '"')"
+    # Skip empty lines
+    [[ -z "$line" ]] && continue
+    # Split the line by '=' and set the variable
+    IFS="=" read -r var value <<< "$line"
+    export $var=$value
+  done < "$CONFIG_FILE"
+fi
 
 NO_TAG_MSG="Instance tagged '$TAG' does not exist"
 
@@ -44,6 +46,7 @@ fi
 
 case $COMMAND in
   up)
+    check_ec2config_file $CONFIG_FILE 
     # Check if an instance with the given tag already exists
     EXISTING_INSTANCE=$(check_tag $TAG)
     if [ -n "$EXISTING_INSTANCE" ]; then
@@ -67,6 +70,7 @@ case $COMMAND in
     ;;
 
   halt)
+    check_ec2config_file $CONFIG_FILE
     # Stop an EC2 instance
     [ ! -n "$(check_tag $TAG)" ] && echo $NO_TAG_MSG && exit 3
     INSTANCE_ID=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=$TAG" \
@@ -76,6 +80,7 @@ case $COMMAND in
     ;;
 
   reboot)
+    check_ec2config_file $CONFIG_FILE
     # Reboot an EC2 instance
     [ ! -n "$(check_tag $TAG)" ] && echo $NO_TAG_MSG && exit 3
     INSTANCE_ID=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=$TAG" \
@@ -86,6 +91,7 @@ case $COMMAND in
     ;;
 
   destroy)
+    check_ec2config_file $CONFIG_FILE
     # Terminate an EC2 instance
     [ ! -n "$(check_tag $TAG)" ] && echo $NO_TAG_MSG && exit 3
     INSTANCE_ID=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=$TAG" \
@@ -96,6 +102,7 @@ case $COMMAND in
     ;;
 
   ssh)
+    check_ec2config_file $CONFIG_FILE
     # SSH into an EC2 instance
     [ ! -n "$(check_tag $TAG)" ] && echo $NO_TAG_MSG && exit 3
     PUBLIC_IP=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=$TAG" \
@@ -109,6 +116,7 @@ case $COMMAND in
     ;;
 
   status)
+    check_ec2config_file $CONFIG_FILE
     # View the status of an EC2 instance by tag
     [ ! -n "$(check_tag $TAG)" ] && echo $NO_TAG_MSG && exit 3
     STATUS=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=$TAG" \
