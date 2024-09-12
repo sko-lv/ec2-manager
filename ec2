@@ -59,12 +59,14 @@ case $COMMAND in
           aws ec2 run-instances --image-id $AMI --instance-type t2.micro --subnet-id $SUBNET \
                         --security-group-ids $SG --key-name $KEY_PAIR \
                         --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$TAG}]" \
-                        --user-data file://$USERDATA_FILE
+                        --user-data file://$USERDATA_FILE \
+                        --user-data file://userdata --iam-instance-profile Name="$EC2_PROFILE"
         else
           # Run instance w/o user data
           aws ec2 run-instances --image-id $AMI --instance-type t2.micro --subnet-id $SUBNET \
                         --security-group-ids $SG --key-name $KEY_PAIR \
-                        --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$TAG}]"
+                        --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$TAG}]" \
+                        --user-data file://userdata --iam-instance-profile Name="$EC2_PROFILE"
       fi
     fi
     ;;
