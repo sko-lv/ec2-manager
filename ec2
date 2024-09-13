@@ -11,7 +11,7 @@ HELP_STRING="Usage: $(basename $0) [up|halt|reboot|destroy|ssh|status|status-all
 check_ec2config_file() {
 # Check if the ec2config file exists
 if [ ! -f "$1" ]; then
-  echo "ERROR: ./ec2config file does not exist."
+  echo "ERROR: $CONFIG_FILE file does not exist."
   exit 1
 fi
 }
