@@ -116,7 +116,7 @@ case $COMMAND in
       exit 3
     fi
     set -x
-    ssh -i "$SSH_KEY_FILE" -o StrictHostKeyChecking=no $SSH_USER@$PUBLIC_IP
+    ssh -i "$SSH_KEY_FILE" "${SSH_OPTS}" -o StrictHostKeyChecking=no $SSH_USER@$PUBLIC_IP
     set +x
     ;;
 
