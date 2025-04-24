@@ -60,6 +60,7 @@ case $COMMAND in
                         --security-group-ids $SG --key-name $KEY_PAIR \
                         --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$TAG}]" \
                         --iam-instance-profile Name="$EC2_PROFILE" \
+                        --instance-market-options 'MarketType=spot'  \
                         --user-data file://$USERDATA_FILE 
         else
           # Run instance w/o user data
