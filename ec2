@@ -23,17 +23,11 @@ check_tag() {
           --query 'Reservations[].Instances[0].InstanceId' --output text
 }
 
-# Read variables from ec2config
+# Read variables from ec2config in a simple and elegant way))
 if [ -f "$CONFIG_FILE" ]; then
-  while IFS= read -r line; do
-    # Remove everything after the first '#' to ignore comments
-    line="$(echo ${line%%#*} | tr -d '"')"
-    # Skip empty lines
-    [[ -z "$line" ]] && continue
-    # Split the line by '=' and set the variable
-    IFS="=" read -r var value <<< "$line"
-    export $var=$value
-  done < "$CONFIG_FILE"
+  set -a                # turn on “export all”
+  source "$CONFIG_FILE" # read and export everything
+  set +a                # turn off auto-export
 fi
 
 NO_TAG_MSG="Instance tagged '$TAG' does not exist"
@@ -115,9 +109,7 @@ case $COMMAND in
       echo "Instance not_found/pending/down or does not have a public IP."
       exit 3
     fi
-    set -x
-    ssh -i "$SSH_KEY_FILE" "${SSH_OPTS}" -o StrictHostKeyChecking=no $SSH_USER@$PUBLIC_IP
-    set +x
+    ssh -i "$SSH_KEY_FILE" ${SSH_OPTS} -o StrictHostKeyChecking=no $SSH_USER@$PUBLIC_IP
     ;;
 
   status)
