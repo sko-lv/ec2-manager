@@ -109,7 +109,12 @@ case $COMMAND in
       echo "Instance not_found/pending/down or does not have a public IP."
       exit 3
     fi
-    ssh -i "$SSH_KEY_FILE" ${SSH_OPTS} -o StrictHostKeyChecking=no $SSH_USER@$PUBLIC_IP
+#   ssh -i "$SSH_KEY_FILE" ${SSH_OPTS} -o StrictHostKeyChecking=no $SSH_USER@$PUBLIC_IP
+    SSH_CMD=(ssh -i "$SSH_KEY_FILE" $SSH_OPTS -o StrictHostKeyChecking=no "$SSH_USER@$PUBLIC_IP")
+    echo "${SSH_CMD[@]}"
+    "${SSH_CMD[@]}"
+
+
     ;;
 
   status)
