@@ -4,7 +4,7 @@
 COMMAND="$1"
 CONFIG_FILE="./ec2config"
 USERDATA_FILE="./userdata"
-HELP_STRING="Usage: $(basename $0) [up|halt|reboot|destroy|ssh|status|status-all]\n
+HELP_STRING="Usage: $(basename $0) [up|halt|reboot|destroy|ssh|status|status-all|destroy-all]\n
                   \tFile ./ec2config is mandatory. File ./userdata - optional." 
 
 
@@ -109,12 +109,9 @@ case $COMMAND in
       echo "Instance not_found/pending/down or does not have a public IP."
       exit 3
     fi
-#   ssh -i "$SSH_KEY_FILE" ${SSH_OPTS} -o StrictHostKeyChecking=no $SSH_USER@$PUBLIC_IP
     SSH_CMD=(ssh -i "$SSH_KEY_FILE" $SSH_OPTS -o StrictHostKeyChecking=no "$SSH_USER@$PUBLIC_IP")
     echo "${SSH_CMD[@]}"
     "${SSH_CMD[@]}"
-
-
     ;;
 
   status)
@@ -139,6 +136,18 @@ case $COMMAND in
     echo "$INSTANCES" | \
          jq -r '.[][] | "\(.Tags[0].Value)\t\t\(.State.Name)\t\(.InstanceId)\t\(.PublicIpAddress)"'
     echo "Costs in current month: \$${COSTS}"
+    ;;
+
+  destroy-all)
+    # Terminate all EC2 instances
+    INSTANCES=$(aws ec2 describe-instances --query 'Reservations[].Instances')
+    INSTANCE_IDS=$(echo "$INSTANCES" | jq -r '.[][] | select(.State.Name != "terminated") | .InstanceId')
+    if [ -z "$INSTANCE_IDS" ]; then
+      echo "No instances found to destroy."
+      exit 0
+    fi
+    echo -e "Destroying instances:\n$INSTANCE_IDS"
+    aws ec2 terminate-instances --instance-ids $INSTANCE_IDS
     ;;
 
   *)
