@@ -127,14 +127,18 @@ case $COMMAND in
     ;;
 
   status-all)
+    # Request AWS account cast usage in current month
+    START_DATE=$(date +%Y-%m-01)
+    END_DATE=$(date -d "$START_DATE +1 month" +%Y-%m-%d)
+    COSTS=$(aws ce get-cost-and-usage   --time-period Start=$START_DATE,End=$END_DATE \
+                --granularity MONTHLY  --metrics UnblendedCost \
+                --query "ResultsByTime[0].Total.UnblendedCost.Amount" \
+                --output text)
     # View the status of all instances with their instance ID and external IP
     INSTANCES=$(aws ec2 describe-instances --query 'Reservations[].Instances')
-    if [ -z "$INSTANCES" ]; then
-      echo "No instances found."
-      exit 3
-    fi
     echo "$INSTANCES" | \
          jq -r '.[][] | "\(.Tags[0].Value)\t\t\(.State.Name)\t\(.InstanceId)\t\(.PublicIpAddress)"'
+    echo "Costs in current month: \$${COSTS}"
     ;;
 
   *)
@@ -143,3 +147,4 @@ case $COMMAND in
     exit 2
     ;;
 esac
+
