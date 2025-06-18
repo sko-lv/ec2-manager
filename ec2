@@ -48,7 +48,7 @@ case $COMMAND in
       aws ec2 start-instances --instance-ids "$EXISTING_INSTANCE"
     else
       # If no instance with the given tag exists, create a new one with or w/o user data
-        if [ -r "$USERDATA_FILE" ]; then
+      if [ -r "$USERDATA_FILE" ]; then
           # Use user data file if present
           aws ec2 run-instances --image-id $AMI --instance-type t2.micro --subnet-id $SUBNET \
                         --security-group-ids $SG --key-name $KEY_PAIR \
@@ -139,15 +139,25 @@ case $COMMAND in
     ;;
 
   destroy-all)
-    # Terminate all EC2 instances
+    # gather only non-terminated instances
     INSTANCES=$(aws ec2 describe-instances --query 'Reservations[].Instances')
     INSTANCE_IDS=$(echo "$INSTANCES" | jq -r '.[][] | select(.State.Name != "terminated") | .InstanceId')
     if [ -z "$INSTANCE_IDS" ]; then
-      echo "No instances found to destroy."
-      exit 0
+        echo "No running instances to destroy." 
+        exit 0
+      else
+        echo "Current status before destroying:"
+       "$0" status-all
+       # ask for confirmation (timeout after 10s)
+       read -p "All listed instances except protected will be destroyed. Continue? (y/N): " -t 10 CONFIRM
+        if [[ "$CONFIRM" != "y" && "$CONFIRM" != "Y" ]]; then
+          echo "Destroy aborted."
+          exit 10
+        fi
+        echo -e "Destroying instances:\n$INSTANCE_IDS"
+        aws ec2 terminate-instances --instance-ids $INSTANCE_IDS
+        exit 0
     fi
-    echo -e "Destroying instances:\n$INSTANCE_IDS"
-    aws ec2 terminate-instances --instance-ids $INSTANCE_IDS
     ;;
 
   *)
